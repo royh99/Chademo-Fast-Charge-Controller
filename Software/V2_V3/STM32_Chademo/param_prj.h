@@ -39,7 +39,7 @@
  */
 
  //Define a version string of your firmware here
-#define VER 1.1.R
+#define VER 1.04.D
 
 /* Entries must be ordered as follows:
    1. Saveable parameters (id != 0)
@@ -47,32 +47,30 @@
    3. Display values
  */
 //Next param id (increase when adding new parameter!): 3
-//Next value Id: 2012
-/*              category          name           unit      min      max     default id */
+//Next value Id: 2010
+/*              category     name         unit       min     max     default id */
 #define PARAM_LIST \
-    PARAM_ENTRY(CAT_POWER,        chargetarget,  "A",       0,      125,    25,    10   ) \
-    PARAM_ENTRY(CAT_POWER,        soclimit,      "%",       0,      100,    100,   12   ) \
-	PARAM_ENTRY(CAT_POWER,        chargelimit,   "A",       0,      125,    125,   2066 ) \
-    PARAM_ENTRY(CAT_POWER,        udctarget,     "V",       0,      500,    380,   92   ) \
-	PARAM_ENTRY(CAT_CONFIG,       curreq_delay,  "10ms",    0,      400,    0,     2010 ) \
-	PARAM_ENTRY(CAT_CONFIG,       ignore_start2, ONOFF,     0,      1,      0,     2011 ) \
-	PARAM_ENTRY(CAT_SHUNT,        ISA_INIT,      ONOFF,     0,      1,      0,     75   ) \
-    VALUE_ENTRY(opmode,           OPMODES, 2000 ) \
-	VALUE_ENTRY(cdmstatus,        CDMSTAT, 2070 ) \
-    VALUE_ENTRY(version,          VERSTR,  2001 ) \
-    VALUE_ENTRY(cpuload,          "%",     2004 ) \
-	VALUE_ENTRY(soc,              "%",     2052 ) \
-    VALUE_ENTRY(batfull,          ONOFF,   2069 ) \
-    VALUE_ENTRY(cdmcureq,         "A",     2076 ) \
-    VALUE_ENTRY(idccdm,           "A",     2067 ) \
-    VALUE_ENTRY(udccdm,           "V",     2068 ) \
-    VALUE_ENTRY(udcbms,           "V",     2048 ) \
-    VALUE_ENTRY(lasterr, errorListString,  2002 ) \
-    VALUE_ENTRY(tmpisa,           "°C",    2005 ) \
-    VALUE_ENTRY(IsaIdc,            "A",    2006 ) \
-    VALUE_ENTRY(power,            "kw",    2007 ) \
-    VALUE_ENTRY(KWh,              "KWh",   2008 ) \
-    VALUE_ENTRY(AMPh,             "Ah",    2009 ) 
+    PARAM_ENTRY(CAT_POWER,    chargetarget, "A",     0,      125,    25,    10  ) \
+    PARAM_ENTRY(CAT_POWER,    soclimit,    "%",      0,      100,    100,    12  ) \
+	PARAM_ENTRY(CAT_POWER,    chgcurlim,   "A",      0,      125,    125,    2066 ) \
+    PARAM_ENTRY(CAT_POWER,    udctarget,   "V",       0,      500,    380,    92  ) \
+    PARAM_ENTRY(CAT_SHUNT,    ISA_INIT,    ONOFF,    0,      1,      0,      75 ) \
+    VALUE_ENTRY(opmode,      OPMODES, 2000 ) \
+    VALUE_ENTRY(cdmstatus,    CDMSTAT, 2070 ) \
+    VALUE_ENTRY(version,     VERSTR,  2001 ) \
+    VALUE_ENTRY(soc,          "%",     2052 ) \
+    VALUE_ENTRY(batfull,      ONOFF,   2069 ) \
+    VALUE_ENTRY(cdmcureq,    "A",     2076 ) \
+    VALUE_ENTRY(idccdm,       "A",     2067 ) \
+    VALUE_ENTRY(udccdm,       "V",     2068 ) \
+    VALUE_ENTRY(udcbms,       "V",     2048 ) \
+    VALUE_ENTRY(lasterr,     errorListString,  2002 ) \
+    VALUE_ENTRY(tmpisa,       "°C",    2005 ) \
+    VALUE_ENTRY(cpuload,     "%",     2004 )    \
+    VALUE_ENTRY(IsaIdc,     "A",     2006 ) \
+    VALUE_ENTRY(power,     "kw",     2007 ) \
+    VALUE_ENTRY(KWh,     "KWh",     2008 )  \
+    VALUE_ENTRY(AMPh,     "Ah",     2009 )
 
 
 /***** Enum String definitions *****/
@@ -82,9 +80,9 @@
 #define CANPERIODS   "0=100ms, 1=10ms"
 #define ONOFF        "0=Off, 1=On"
 #define CAT_POWER    "Power Limit"
-#define CAT_CONFIG   "Chademo input config"
 #define CAT_SHUNT    "ISA Shunt Control"
-#define VERSTR STRINGIFY(4=VER-CHD)
+
+#define VERSTR STRINGIFY(4=VER)
 
 /***** enums ******/
 

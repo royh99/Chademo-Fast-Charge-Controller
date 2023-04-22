@@ -44,8 +44,8 @@
 #define SENDMAP_ADDRESS       CANMAP_ADDRESS
 #define RECVMAP_ADDRESS       (CANMAP_ADDRESS + sizeof(canSendMap))
 #define CRC_ADDRESS           (CANMAP_ADDRESS + sizeof(canSendMap) + sizeof(canRecvMap))
-#define SENDMAP_WORDS         (sizeof(canSendMap) / sizeof(uint32_t))
-#define RECVMAP_WORDS         (sizeof(canRecvMap) / sizeof(uint32_t))
+#define SENDMAP_WORDS         (sizeof(canSendMap) / (sizeof(uint32_t)))
+#define RECVMAP_WORDS         (sizeof(canRecvMap) / (sizeof(uint32_t)))
 #define CANID_UNSET           0xffff
 #define NUMBITS_LASTMARKER    -1
 #define forEachCanMap(c,m) for (CANIDMAP *c = m; (c - m) < MAX_MESSAGES && c->canId < CANID_UNSET; c++)
@@ -286,12 +286,13 @@ Can::Can(uint32_t baseAddr, enum baudrates baudrate)
    switch (baseAddr)
    {
       case CAN1:
+
          // Configure CAN pin: RX (input pull-up).
          gpio_set_mode(GPIO_BANK_CAN1_RX, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO_CAN1_RX);
          gpio_set(GPIO_BANK_CAN1_RX, GPIO_CAN1_RX);
          // Configure CAN pin: TX.-
          gpio_set_mode(GPIO_BANK_CAN1_TX, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO_CAN1_TX);
-         //CAN1 RX and TX IRQs
+			
          nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ); //CAN RX
          nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, 0xf << 4); //lowest priority
          nvic_enable_irq(NVIC_CAN_RX1_IRQ); //CAN RX

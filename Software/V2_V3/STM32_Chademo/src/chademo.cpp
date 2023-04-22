@@ -23,6 +23,7 @@ bool ChaDeMo::chargeEnabled = false;
 bool ChaDeMo::parkingPosition = false;
 bool ChaDeMo::fault = false;
 bool ChaDeMo::contactorOpen = false;
+uint8_t ChaDeMo::version = 0;
 uint8_t ChaDeMo::chargerMaxCurrent;
 uint8_t ChaDeMo::chargeCurrentRequest;
 uint32_t ChaDeMo::rampedCurReq;
@@ -41,6 +42,7 @@ void ChaDeMo::Process108Message(uint32_t data[2])
 
 void ChaDeMo::Process109Message(uint32_t data[2])
 {
+   version = data[0] & 0x3; // get chademo protocol version
    chargerOutputVoltage = data[0] >> 8;
    chargerOutputCurrent = data[0] >> 24;
    chargerStatus = (data[1] >> 8) & 0x3F;
@@ -74,7 +76,7 @@ void ChaDeMo::CheckSensorDeviation(uint16_t internalVoltage)
 
    vtgDev = ABS(vtgDev);
 
-   if (vtgDev > 10)
+   if (vtgDev > 10 && chargerOutputVoltage > 50)
    {
       vtgTimeout++;
    }
@@ -104,20 +106,20 @@ void ChaDeMo::SendMessages(Can* can)
    data[1] = (targetBatteryVoltage + 10) | 200 << 16;
 
    can->Send(0x100, data);
-
+																												  
    data[0] = 0x00FEFF00;
    data[1] = 0;
 
    can->Send(0x101, data);
 
-   data[0] = 1 | ((uint32_t)targetBatteryVoltage << 8) | ((uint32_t)rampedCurReq << 24);
+   data[0] = version | ((uint32_t)targetBatteryVoltage << 8) | ((uint32_t)rampedCurReq << 24);
    data[1] = (uint32_t)curSensFault << 2 |
              (uint32_t)vtgSensFault << 4 |
              (uint32_t)chargeEnabled << 8 |
              (uint32_t)parkingPosition << 9 |
              (uint32_t)fault << 10 |
              (uint32_t)contactorOpen << 11 |
-             (uint32_t)soc << 16;
-
+             (uint32_t)100 << 16; // set to 100% for V0.9.1 / 100KWh for v1.x
+			 
    can->Send(0x102, data);
 }

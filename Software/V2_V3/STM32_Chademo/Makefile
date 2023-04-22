@@ -37,9 +37,9 @@ CPPFLAGS    = -Os -Wall -Wextra -Iinclude/ -Ilibopeninv/include -Ilibopencm3/inc
 LDSCRIPT	  = linker.ld
 LDFLAGS    = -Llibopencm3/lib -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections,-Map,linker.map
 OBJSL		  = main.o hwinit.o stm32scheduler.o params.o terminal.o terminal_prj.o \
-             my_string.o digio.o sine_core.o my_fp.o printf.o anain.o \
+             my_string.o digio.o my_fp.o printf.o anain.o \
              param_save.o errormessage.o stm32_can.o \
-             picontroller.o terminalcommands.o chademo.o isa_shunt.o
+             terminalcommands.o chademo.o isa_shunt.o
 
 OBJS     = $(patsubst %.o,obj/%.o, $(OBJSL))
 vpath %.c src/ libopeninv/src
@@ -116,7 +116,7 @@ get-deps:
 	@printf "  GIT SUBMODULE\n"
 	$(Q)git submodule update --init
 	@printf "  MAKE libopencm3\n"
-	$(Q)${MAKE} -C libopencm3
+	$(Q)${MAKE} -C libopencm3 TARGETS=stm32/f1
 
 Test:
 	cd test && $(MAKE)

@@ -1,5 +1,5 @@
 /*
- * This file is part of the stm32-template project.
+	* This file is part of the stm32-template project.
  *
  * Copyright (C) 2020 Johannes Huebner <dev@johanneshuebner.com>
  *
@@ -40,6 +40,7 @@
 static Stm32Scheduler* scheduler;
 static Can* can;
 static bool chargeMode = false;
+static int lockTime = 0;
 
 static void CanCallback(uint32_t id, uint32_t data[2])
 {
@@ -82,53 +83,50 @@ static void CanCallback(uint32_t id, uint32_t data[2])
    }
 }
 
-
 static void RunChaDeMo()
-{
-   static uint32_t connectorLockTime = 0;
-
+{  
    if (!chargeMode && rtc_get_counter_val() > 100) //100*10ms = 1s
    {
-
       //Check for Charger start stop 1
-      if (DigIo::charger_in_1.Get())
+      if (DigIo::charger_in_1.Get()) // charger_in_1 is active HIGH.  GPIOB, Pin 7
       {
          chargeMode = true;
          Param::SetInt(Param::opmode, MOD_CHARGESTART);
       }
    }
-
    /* 1s after entering charge mode, enable charge permission */
-   if (Param::GetInt(Param::opmode) == MOD_CHARGESTART && rtc_get_counter_val() > 200)
+   if ( (Param::GetInt(Param::opmode) == MOD_CHARGESTART) && (rtc_get_counter_val() > 200) )
    {
       //TODO compatibility check?
       ChaDeMo::SetEnabled(true);
-      DigIo::charge_enable_out.Set();
+      DigIo::charge_enable_out.Set(); // GPIOB, Pin 13, OUT2, Chademo pin 4
    }
-
-   if (connectorLockTime == 0 && ChaDeMo::ConnectorLocked())
+   
+   if (Param::GetInt(Param::opmode) == MOD_CHARGESTART && ChaDeMo::ConnectorLocked()) // This comes from EVSE status, CAN id 0x109 byte 5, bit 2
    {
-      connectorLockTime = rtc_get_counter_val();
       Param::SetInt(Param::opmode, MOD_CHARGELOCK);
+	  lockTime = int (rtc_get_counter_val());
+   }  
+   //Once charger_in_2 goes low, close HV contactors 
+   if ( (Param::GetInt(Param::opmode) == MOD_CHARGELOCK) && (!(DigIo::charger_in_2.Get()) || (Param::GetInt(Param::ignore_start2) ))) // charger_in_2 is active LOW. GPIOB, Pin 6
+   {  
+        ChaDeMo::SetContactor(true);
+        DigIo::hv_enable_out.Set(); // GPIOB, Pin 14, OUT1, Chademo relay control
+        DigIo::hv_req_out.Set();    // GPIOB, Pin 12 out3  				
+        
+   if ( (int(rtc_get_counter_val()) - lockTime) > Param::GetInt(Param::curreq_delay)) // delay between closing contactors and requesting current
+		{
+			Param::SetInt(Param::opmode, MOD_CHARGE); 
+        }
    }
-
-   //Once charger 2, close HV contactors
-   if (Param::GetInt(Param::opmode) == MOD_CHARGELOCK && (rtc_get_counter_val() - connectorLockTime) > 1000 &&
-         DigIo::charger_in_2.Get())
-   {
-      ChaDeMo::SetContactor(true);
-      Param::SetInt(Param::opmode, MOD_CHARGE);
-      DigIo::hv_enable_out.Set();
-
-   }
-
+   
    if (Param::GetInt(Param::opmode) == MOD_CHARGE)
    {
-      int chargeCur = Param::GetInt(Param::chgcurlim);
-      int chargeLim = Param::GetInt(Param::chargelimit);
-      chargeCur = MIN(MIN(255, chargeLim), chargeCur);
+      int chargeCur = Param::GetInt(Param::chargetarget); // target charge current
+      int chargeLim = Param::GetInt(Param::chargelimit); // user set current limit																			  
+      chargeCur = MIN(MIN(125, chargeLim), chargeCur);
       ChaDeMo::SetChargeCurrent(chargeCur);
-      ChaDeMo::CheckSensorDeviation(Param::GetInt(Param::udcbms));
+    //  ChaDeMo::CheckSensorDeviation(Param::GetInt(Param::udcbms));
    }
 
    if (Param::GetInt(Param::opmode) == MOD_CHARGEND)
@@ -136,7 +134,7 @@ static void RunChaDeMo()
       ChaDeMo::SetChargeCurrent(0);
    }
 
-   ChaDeMo::SetTargetBatteryVoltage(Param::GetInt(Param::udcthresh));
+   ChaDeMo::SetTargetBatteryVoltage(Param::GetInt(Param::udctarget));
    ChaDeMo::SetSoC(Param::Get(Param::soc));
    Param::SetInt(Param::cdmcureq, ChaDeMo::GetRampedCurrentRequest());
 
@@ -144,7 +142,7 @@ static void RunChaDeMo()
    {
       if (Param::GetInt(Param::batfull) ||
           Param::Get(Param::soc) >= Param::Get(Param::soclimit) ||
-          Param::GetInt(Param::chargelimit) == 0)
+          Param::GetInt(Param::chargetarget) == 0)
          // !ISA::Alive(rtc_get_counter_val()))
       {
         // if (!ISA::Alive(rtc_get_counter_val()))
@@ -152,7 +150,8 @@ static void RunChaDeMo()
         //    ChaDeMo::SetGeneralFault();
          //}
          ChaDeMo::SetEnabled(false);
-         //TODO:: SET CHARGE ENABLE OUTPUT OFF
+         DigIo::charge_enable_out.Clear(); // GPIOB, Pin 13 
+		
          Param::SetInt(Param::opmode, MOD_CHARGEND);
       }
 
@@ -161,10 +160,7 @@ static void RunChaDeMo()
       ChaDeMo::SendMessages(can);
    }
    Param::SetInt(Param::cdmstatus, ChaDeMo::GetChargerStatus());
-//   if (!ISA::Alive(rtc_get_counter_val()))
-  // {
-  //    ErrorMessage::Post(ERR_SHUNTCOMM);
-  // }
+
 }
 //sample 100ms task
 static void Ms100Task(void)
@@ -186,12 +182,15 @@ static void Ms100Task(void)
 
       RunChaDeMo();
 
-   //If we chose to send CAN messages every 100 ms, do this here.
- //  if (Param::GetInt(Param::canperiod) == CAN_PERIOD_100MS)
-  //    can->SendAll();
-
     int16_t IsaTemp=ISA::Temperature;
     Param::SetInt(Param::tmpisa,IsaTemp);
+	
+	if(Param::GetInt(Param::ISA_INIT)==1)
+	{
+	   ISA::initialize();//only call this once if a new sensor is fitted.
+	   Param::SetInt(Param::ISA_INIT, 0); // turn initalise off 
+	   parm_save();
+	}
 }
 
 //sample 10 ms task
@@ -199,12 +198,6 @@ static void Ms10Task(void)
 {
    //Set timestamp of error message
    ErrorMessage::SetTime(rtc_get_counter_val());
-
-   if (DigIo::test_in.Get())
-   {
-      //Post a test error message when our test input is high
-      ErrorMessage::Post(ERR_TESTERROR);
-   }
 
    int32_t IsaVolt = FP_FROMINT(ISA::Voltage)/1000;
     Param::SetFlt(Param::udcbms,IsaVolt);
@@ -220,7 +213,6 @@ static void Ms10Task(void)
 
     int32_t Amph = FP_FROMINT(ISA::Ah)/3600;
     Param::SetFlt(Param::AMPh, Amph);
-
 }
 
 /** This function is called when the user changes a parameter */
@@ -251,20 +243,27 @@ extern "C" int main(void)
    DIG_IO_CONFIGURE(DIG_IO_LIST);
    AnaIn::Start(); //Starts background ADC conversion via DMA
    write_bootloader_pininit(); //Instructs boot loader to initialize certain pins
-   gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, AFIO_MAPR_CAN1_REMAP_PORTB);
+   //gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, AFIO_MAPR_CAN1_REMAP_PORTB);
    tim_setup(); //Sample init of a timer
    nvic_setup(); //Set up some interrupts
    parm_load(); //Load stored parameters
 
    Stm32Scheduler s(TIM2); //We never exit main so it's ok to put it on stack
    scheduler = &s;
+   
    //Initialize CAN1, including interrupts. Clock must be enabled in clock_setup()
-   Can c(CAN1, Can::Baud500);
+   Can c(CAN1, Can::Baud500); //This sets-up CAN1 timing etc but on PA11, PA12
+   AFIO_MAPR |= AFIO_MAPR_CAN1_REMAP_PORTB; //Remap CAN1 to PB8 and PB9
+   // Configure CAN pin: RX (input pull-up).
+   gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO8);
+   gpio_set(GPIOB, GPIO8);// Pull-up PB8
+   // Configure CAN pin: TX
+   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
    //store a pointer for easier access
    can = &c;
    c.SetNodeId(5);
    c.SetReceiveCallback(CanCallback);
-      //Chademo
+   //Chademo
    c.RegisterUserMessage(0x108);
    c.RegisterUserMessage(0x109);
 
@@ -290,6 +289,7 @@ extern "C" int main(void)
    //There you can also configure the priority of the scheduler over other interrupts
    s.AddTask(Ms10Task, 10);
    s.AddTask(Ms100Task, 100);
+   
 
    //backward compatibility, version 4 was the first to support the "stream" command
    Param::SetInt(Param::version, 4);
@@ -303,5 +303,4 @@ extern "C" int main(void)
       t.Run();
 
    return 0;
-}
-
+}																				   

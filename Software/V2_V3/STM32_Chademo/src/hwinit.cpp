@@ -73,12 +73,12 @@ void write_bootloader_pininit()
    //!!! Customize this to match your project !!!
    //Here we specify that PC13 be initialized to ON
    //AND PB1 AND PB2 be initialized to OFF
-   commands.pindef[0].port = GPIOC;
-   commands.pindef[0].pin = GPIO13;
+   commands.pindef[0].port =  GPIOC;
+   commands.pindef[0].pin =   GPIO13;
    commands.pindef[0].inout = PIN_OUT;
    commands.pindef[0].level = 1;
-   commands.pindef[1].port = GPIOB;
-   commands.pindef[1].pin = GPIO1 | GPIO2;
+   commands.pindef[1].port =  GPIOB;
+   commands.pindef[1].pin =   GPIO12 | GPIO13 | GPIO14;
    commands.pindef[1].inout = PIN_OUT;
    commands.pindef[1].level = 0;
 
@@ -154,6 +154,6 @@ void tim_setup()
    timer_enable_counter(OVER_CUR_TIMER);
 
    /** setup gpio */
-   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO7 | GPIO8 | GPIO9);
+   //gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO7 | GPIO8 | GPIO9);
 }
 

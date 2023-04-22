@@ -57,6 +57,7 @@ class ChaDeMo
       static bool parkingPosition;
       static bool fault;
       static bool contactorOpen;
+	  static uint8_t version;
       static uint8_t chargerStatus;
       static uint8_t chargerMaxCurrent;
       static uint8_t chargeCurrentRequest;

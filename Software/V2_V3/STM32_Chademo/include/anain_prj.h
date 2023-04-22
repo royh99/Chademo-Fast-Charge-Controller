@@ -14,6 +14,6 @@
 
 //Here you specify a list of analog inputs, see main.cpp on how to use them
 #define ANA_IN_LIST \
-   ANA_IN_ENTRY(test, GPIOC, 1) \
+    ANA_IN_ENTRY(test, GPIOC, 1) \
 
 #endif // ANAIN_PRJ_H_INCLUDED
